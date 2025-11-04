@@ -13,6 +13,7 @@ import sys
 import numpy as np
 from paddleocr import TextDetection
 from dialog_merger import merge_dialog_boxes, visualize_merged_boxes
+from visualize_dialogs import create_dialog_only_image
 
 
 def detect_text_with_confidence(image_path, confidence_threshold=0.75, output_dir="output", merge_dialogs=False):
@@ -103,6 +104,15 @@ def detect_text_with_confidence(image_path, confidence_threshold=0.75, output_di
                 # 显示合并信息
                 merge_info = visualize_merged_boxes(merged_result)
                 print(f"\n{merge_info}")
+                
+                # 生成只显示对话框的图像
+                try:
+                    dialog_img_path = create_dialog_only_image(image_path, merged_json_path)
+                    print(f"对话框专用图像已保存至: {dialog_img_path}")
+                except ImportError:
+                    print("提示: 安装 opencv-python 可生成对话框专用图像")
+                except Exception as e:
+                    print(f"生成对话框图像时出错: {e}")
                 
                 filtered_result['merged_result'] = merged_result
         else:

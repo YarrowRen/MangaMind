@@ -148,9 +148,8 @@ def merge_dialog_boxes(detection_result: Dict[str, Any],
         
         find_connected_texts(rect, current_group)
         
-        # 只保留包含足够文本框的群组
-        if len(current_group) >= min_group_size:
-            merged_groups.append(current_group)
+        # 保留所有群组（包括单个文本框）
+        merged_groups.append(current_group)
     
     # 创建合并后的结果
     merged_result = {
@@ -186,7 +185,8 @@ def merge_dialog_boxes(detection_result: Dict[str, Any],
             'individual_polys': group_polys,
             'individual_scores': group_scores,
             'avg_score': sum(group_scores) / len(group_scores),
-            'text_count': len(group_indices)
+            'text_count': len(group_indices),
+            'is_merged': len(group_indices) > 1  # 标识是否为合并的群组
         }
         
         merged_result['dialog_boxes'].append(merged_box)
@@ -202,17 +202,27 @@ def visualize_merged_boxes(merged_result: Dict[str, Any]) -> str:
     dialog_boxes = merged_result['dialog_boxes']
     
     if not dialog_boxes:
-        return "未检测到可合并的对话框区域"
+        return "未检测到文本区域"
     
-    info = f"检测到 {len(dialog_boxes)} 个对话框区域:\n\n"
+    # 统计不同类型的区域
+    merged_count = sum(1 for box in dialog_boxes if box.get('is_merged', True))
+    single_count = len(dialog_boxes) - merged_count
+    
+    info = f"检测到 {len(dialog_boxes)} 个文本区域 (合并对话框: {merged_count}, 单个文本框: {single_count}):\n\n"
     
     for i, box in enumerate(dialog_boxes, 1):
         bbox = box['bbox']
         width = bbox[1][0] - bbox[0][0]
         height = bbox[2][1] - bbox[0][1]
+        is_merged = box.get('is_merged', True)
         
-        info += f"对话框 {i}:\n"
-        info += f"  - 包含文本框数量: {box['text_count']}\n"
+        if is_merged:
+            info += f"对话框 {i} (合并):\n"
+            info += f"  - 包含文本框数量: {box['text_count']}\n"
+        else:
+            info += f"文本框 {i} (单个):\n"
+            info += f"  - 文本框数量: 1\n"
+            
         info += f"  - 平均置信度: {box['avg_score']:.3f}\n"
         info += f"  - 边界框大小: {width} x {height}\n"
         info += f"  - 位置: ({bbox[0][0]}, {bbox[0][1]}) 到 ({bbox[2][0]}, {bbox[2][1]})\n"
