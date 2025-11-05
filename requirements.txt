@@ -1,0 +1,13 @@
+# OCR模块依赖
+paddleocr>=2.7.0
+paddlepaddle>=2.5.0
+opencv-python>=4.5.0
+numpy>=1.21.0
+Pillow>=8.0.0
+
+# 智能体模块依赖
+openai>=1.0.0
+langgraph>=0.0.40
+
+# 可选依赖
+# paddlepaddle-gpu>=2.5.0  # 取消注释以使用GPU加速

@@ -1,115 +1,272 @@
-# 通用文本检测脚本使用说明
+# MangaMind - 漫画文本识别项目
 
-## 功能描述
-本脚本基于PaddleOCR实现，用于检测图片中的文本区域（支持多语言），过滤高置信度结果，并保存可视化图片和JSON格式的检测结果。支持对话框智能合并功能。
+## 项目模块
 
-## 安装依赖
+### OCR Dialog 模块
+OCR 对话框识别处理器，基于 PaddleOCR 实现。专门负责文本检测、OCR识别、对话框智能合并等功能。
 
-首先安装PaddleOCR：
+### Agents 模块  
+智能体工作流模块，基于 LangGraph 实现。负责调用 OCR 模块处理图像，然后使用 LLM 生成对话脚本和故事总结。
+
+## 核心特性
+
+- 🔍 **高精度文本检测**: 基于 PP-OCRv5 高精度模型
+- 🎯 **智能对话框合并**: 自动识别和合并相邻的对话框区域
+- 🌐 **多语言支持**: 支持中文（简体/繁体）、日文、英文等多种语言
+- 📊 **对话序列生成**: 按照阅读顺序生成对话序列（从右上到左下）
+- 🚀 **批量处理**: 支持文件夹批量处理和结果统计
+- 📝 **完整日志系统**: 替代所有print语句，支持文件和控制台输出
+- ⚙️ **模块化架构**: 工业级项目结构，易于扩展和维护
+- 🤖 **智能工作流**: 基于LangGraph的端到端故事生成流水线
+- 🧠 **LLM集成**: 支持OpenAI等LLM模型进行对话分析和故事创作
+
+## 项目结构
+
+```
+MangaMind/
+├── ocr_dialog/                   # OCR对话框处理模块
+│   ├── config/                   # 配置管理
+│   ├── core/                     # 核心功能模块
+│   │   ├── ocr_engine.py         # OCR识别引擎
+│   │   ├── text_detector.py      # 文本检测器
+│   │   ├── dialog_merger.py      # 对话框合并器
+│   │   └── processor.py          # 主处理器
+│   └── utils/                    # 工具模块
+│       ├── logger.py             # 日志系统
+│       ├── image_processor.py    # 图像处理工具
+│       └── visualizer.py         # 可视化工具
+├── agents/                       # 智能体模块
+│   ├── config/                   # 智能体配置
+│   │   └── settings.py          # LLM和工作流配置
+│   ├── core/                     # 核心组件
+│   │   ├── agent_processor.py    # 智能体主处理器
+│   │   └── llm_client.py         # LLM客户端
+│   ├── workflows/                # LangGraph工作流
+│   │   └── story_processor.py    # 故事处理工作流
+│   └── utils/                    # 智能体工具
+├── main.py                       # OCR模块入口脚本
+├── batch_process.py              # OCR批量处理脚本
+├── story_agent.py                # 智能体主入口脚本
+├── requirements.txt             # 依赖列表
+└── README.md                    # 项目说明
+```
+
+## 安装和配置
+
+### 环境要求
+
+- Python 3.8+
+- PaddleOCR >= 2.7.0 (OCR模块)
+- PaddlePaddle >= 2.5.0 (OCR模块)
+- OpenAI >= 1.0.0 (智能体模块 - 兼容Grok API)
+- LangGraph >= 0.0.40 (智能体模块)
+
+### 安装依赖
 
 ```bash
-pip install paddleocr
+# 克隆仓库
+git clone https://github.com/manga-mind/manga-mind.git
+cd MangaMind
+
+# 安装依赖
+pip install -r requirements.txt
 ```
 
 ## 使用方法
 
-### 基本用法
+### 单个图像处理
+
 ```bash
-python text_detection.py <图片路径>
+# 基本文本检测
+python main.py image.jpg
+
+# 启用OCR文字识别
+python main.py image.jpg --ocr
+
+# OCR + 对话框合并
+python main.py image.jpg --ocr --merge
+
+# 自定义语言和置信度
+python main.py image.jpg --ocr --merge --lang chinese_cht --confidence 0.8
+
+# 完整参数示例
+python main.py image.jpg --ocr --merge --lang chinese_cht --confidence 0.8 --output results --gpu
 ```
 
-### 完整参数
-```bash
-python text_detection.py <图片路径> [选项]
+### 批量处理
 
-选项:
-  -c, --confidence  置信度阈值 (默认: 0.75)
-  -o, --output      输出目录 (默认: output)
-  -m, --merge       合并可能的对话框区域
-  -h, --help        显示帮助信息
+```bash
+# 批量处理文件夹中的所有图像
+python batch_process.py input_folder
+
+# 自定义输出目录和参数
+python batch_process.py input_folder --output batch_results --confidence 0.8 --lang chinese_cht
+
+# 静默模式，输出到日志文件
+python batch_process.py input_folder --quiet --log-file processing.log
 ```
 
-### 使用示例
+### 智能体工作流 (NEW!)
 
-1. **基本检测（使用默认参数）**
-   ```bash
-   python text_detection.py image.jpg
-   ```
+```bash
+# 设置Grok API密钥
+export XAI_API_KEY="your-xai-api-key"
 
-2. **自定义置信度阈值**
-   ```bash
-   python text_detection.py image.jpg --confidence 0.8
-   ```
+# 端到端故事生成：OCR + 对话脚本 + 故事总结
+python story_agent.py input_folder
 
-3. **启用对话框合并功能**
-   ```bash
-   python text_detection.py image.jpg --merge
-   ```
+# 使用Grok-2模型
+python story_agent.py input_folder --model grok-2
 
-4. **完整参数示例**
-   ```bash
-   python text_detection.py image.jpg -c 0.8 -o results --merge
-   ```
+# 调整创造性（降低温度）
+python story_agent.py input_folder --temperature 0.3
+
+# 显示智能体状态
+python story_agent.py input_folder --status
+```
+
+### 命令行参数说明
+
+#### 主程序参数 (main.py)
+
+- `image_path`: 输入图片路径
+- `--output, -o`: 输出目录（默认: output）
+- `--ocr`: 启用OCR文字识别（默认仅检测）
+- `--lang, -l`: OCR识别语言（默认: chinese_cht）
+- `--confidence, -c`: 置信度阈值（默认: 0.75）
+- `--merge, -m`: 合并可能的对话框区域
+- `--merge-distance`: 对话框合并最大距离（默认: 40.0）
+- `--gpu`: 使用GPU加速
+- `--log-level`: 日志级别（DEBUG/INFO/WARNING/ERROR）
+- `--log-file`: 日志文件路径
+- `--quiet, -q`: 静默模式
+
+#### 批处理参数 (batch_process.py)
+
+- `input_folder`: 输入图像文件夹路径
+- 其他参数与主程序相同
 
 ## 输出结果
 
-脚本会在指定的输出目录中生成以下文件：
+### 文件输出
 
-1. **可视化图片**: `detected_<原图片名>`
-   - 在原图上标注检测到的文本区域边框
+1. **基础结果**:
+   - `detected_<图片名>.json` - 文本检测结果
+   - `ocr_<图片名>.json` - OCR识别结果
+   - `detected_<图片名>.jpg` - 可视化检测图片
 
-2. **JSON结果文件**: `result_<图片名>.json`
-   - 包含检测结果的详细信息
+2. **合并结果**（启用 --merge）:
+   - `merged_<图片名>.json` - 对话框合并结果
+   - `dialog_sequence_<图片名>.json` - 按阅读顺序的对话序列
 
-### JSON结果格式
+3. **批处理结果**:
+   - `batch_dialogs.json` - 简化的批处理统计结果
+
+### JSON格式说明
+
+#### 检测结果格式
 ```json
 {
-    "input_path": "输入图片路径",
+    "input_path": "image.jpg",
     "confidence_threshold": 0.75,
     "total_detections": 10,
     "high_confidence_detections": 5,
-    "dt_polys": [
-        [
-            [x1, y1], [x2, y2], [x3, y3], [x4, y4]
-        ]
-    ],
-    "dt_scores": [0.95, 0.92, 0.98]
+    "dt_polys": [[[x1,y1],[x2,y2],[x3,y3],[x4,y4]]],
+    "dt_scores": [0.95, 0.92, 0.98],
+    "ocr_enabled": false
 }
 ```
 
-字段说明：
-- `input_path`: 输入图片路径
-- `confidence_threshold`: 使用的置信度阈值
-- `total_detections`: 总检测区域数量
-- `high_confidence_detections`: 高置信度区域数量
-- `dt_polys`: 文本区域的四边形坐标点
-- `dt_scores`: 对应区域的置信度分数
+#### 对话序列格式
+```json
+{
+    "total_dialogs": 3,
+    "reading_order": "right_top_to_left_bottom",
+    "dialog_sequence": [
+        {
+            "sequence_id": 1,
+            "dialog_text": "你好世界",
+            "confidence_score": 0.95,
+            "dialog_type": "merged",
+            "text_count": 2,
+            "position": {"right_top_x": 100, "right_top_y": 50}
+        }
+    ]
+}
+```
 
-## 模型说明
+## 配置说明
 
-脚本使用 `PP-OCRv5_server_det` 高精度文本检测模型：
-- 检测精度: 83.8% (Hmean)
-- 适合服务端部署，精度较高
-- 支持多语言文本检测（中文、英文、日文等）
+### 支持的语言代码
+- `chinese_cht` - 繁体中文（默认）
+- `chinese_sim` - 简体中文
+- `japanese` - 日文
+- `english` - 英文
+- `korean` - 韩文
 
-## 注意事项
+### 模型配置
+- **检测模型**: PP-OCRv5_server_det（高精度）
+- **识别模型**: 多语言文本识别模型
+- **GPU支持**: 可选启用GPU加速
 
-1. 首次运行时，PaddleOCR会自动下载模型文件，可能需要一些时间
-2. 如果需要GPU加速，请安装GPU版本的PaddlePaddle
-3. 脚本默认使用CPU推理，如需GPU推理，请修改脚本中的`device="cpu"`为`device="gpu"`
-4. 确保输入图片格式支持（JPG、PNG等常见格式）
+## 开发和扩展
+
+### 代码风格
+项目使用 Black 进行代码格式化，flake8 进行代码质量检查：
+
+```bash
+# 格式化代码
+black manga_mind/
+
+# 代码质量检查
+flake8 manga_mind/
+
+# 类型检查
+mypy manga_mind/
+```
+
+### 模块扩展
+项目采用模块化设计，可以轻松扩展新功能：
+
+1. **新增检测算法**: 在 `core/` 目录下添加新的检测器
+2. **自定义合并策略**: 扩展 `DialogMerger` 类
+3. **新增输出格式**: 在 `utils/` 目录下添加新的编码器
 
 ## 常见问题
 
+**Q: 首次运行很慢？**
+A: PaddleOCR会自动下载模型文件，首次运行需要下载时间
+
 **Q: 如何提高检测精度？**
-A: 可以降低置信度阈值（如0.6），或使用更高分辨率的图片
+A: 可以降低置信度阈值或使用更高分辨率的图片
 
-**Q: 如何加速检测？**
-A: 可以将模型改为`PP-OCRv5_mobile_det`移动端模型，或使用GPU推理
+**Q: 对话框合并效果不理想？**
+A: 可以调整 `--merge-distance` 参数来优化合并距离
 
-**Q: 支持哪些语言？**
-A: 支持多语言文本检测，包括中文（简体/繁体）、英文、日文等
+**Q: 支持哪些图像格式？**
+A: 支持 JPG、PNG、BMP、TIFF、WEBP 等常见格式
 
-**Q: 对话框合并功能如何使用？**
-A: 添加 `--merge` 参数可启用智能对话框合并，生成额外的合并结果文件
+**Q: 如何使用GPU加速？**
+A: 安装GPU版本依赖并添加 `--gpu` 参数
 
+## 许可证
+
+MIT License
+
+## 贡献指南
+
+欢迎提交 Issue 和 Pull Request！
+
+1. Fork 项目
+2. 创建功能分支
+3. 提交更改
+4. 创建 Pull Request
+
+## 更新日志
+
+### v1.0.0
+- 🎉 初始发布
+- ✨ 工业级模块化架构重构
+- 📝 完整日志系统实现
+- 🚀 批量处理功能优化
+- 📦 包管理和安装支持

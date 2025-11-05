@@ -1,5 +1,7 @@
 input/
 output/
+ocr_output/
+story_output/
 __pycache__/
 *.log
 *.tmp
